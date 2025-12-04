@@ -1,5 +1,9 @@
 package enteties;
 
+
+import androidx.room.Entity;
+
+@Entity(tableName = "auto")
 public class Auto {
     private String matricula;
     private String marca;

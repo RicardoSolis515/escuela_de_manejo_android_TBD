@@ -1,5 +1,9 @@
 package enteties;
 
+
+import androidx.room.Entity;
+
+@Entity(tableName = "instructor")
 public class Instructor {
     private String NSS;
     private String nombre;
