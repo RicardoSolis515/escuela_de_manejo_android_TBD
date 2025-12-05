@@ -45,4 +45,7 @@ public interface AutoDAO {
 
     @Query("SELECT * FROM auto WHERE matricula = :matricula")
     Auto mostrarUnico(String matricula);
+
+    @Query("SELECT * FROM auto WHERE asignado = :filtro")
+    List<Auto> buscarPorAsignado(boolean filtro);
 }

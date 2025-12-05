@@ -1,5 +1,6 @@
 package com.example.escuela_de_manejo_android;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,8 +20,8 @@ import java.util.List;
 
 import db.Escuale_db;
 import enteties.Instructor;
-
 public class InstructorActivity extends AppCompatActivity {
+
     private RecyclerView recyclerView;
     private CustomAdapterInstructor adapter;
     private ArrayList<Instructor> listaInstructores = new ArrayList<>();
@@ -30,7 +31,12 @@ public class InstructorActivity extends AppCompatActivity {
 
     private Escuale_db db;
 
+    // 🔵 ESTE ES EL INSTRUCTOR ENCONTRADO POR BUSQUEDA
+    private Instructor instructorEncontrado = null;
+
+    // 🔵 ESTE ES EL INSTRUCTOR SELECCIONADO EN LA LISTA
     private Instructor instructorSeleccionado = null;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,12 +65,11 @@ public class InstructorActivity extends AppCompatActivity {
 
     private void configurarRecycler() {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-
         adapter = new CustomAdapterInstructor(listaInstructores);
 
-        // Evento al seleccionar un instructor
         adapter.setOnItemClickListener(instructor -> {
             instructorSeleccionado = instructor;
+            instructorEncontrado = instructor; // 🔵 también lo guardamos como encontrado
             btnModificar.setEnabled(true);
             btnEliminar.setEnabled(true);
         });
@@ -73,65 +78,104 @@ public class InstructorActivity extends AppCompatActivity {
     }
 
     private void cargarTodos() {
-        List<Instructor> data = db.instructorDAO().mostrarTodos();
-        listaInstructores.clear();
-        listaInstructores.addAll(data);
-        adapter.notifyDataSetChanged();
+        new Thread(() -> {
+            List<Instructor> data = db.instructorDAO().mostrarTodos();
+
+            runOnUiThread(() -> {
+                listaInstructores.clear();
+                listaInstructores.addAll(data);
+                adapter.notifyDataSetChanged();
+            });
+        }).start();
     }
+
 
     private void configurarClicks() {
 
+        // 🔍 BUSCAR POR NSS EXACTO
         btnBuscar.setOnClickListener(v -> {
             String filtro = edtBuscar.getText().toString().trim();
+
             if (filtro.isEmpty()) {
-                cargarTodos();
-            } else {
-                List<Instructor> result = db.instructorDAO().buscarPorCoincidencia(filtro);
-                listaInstructores.clear();
-                listaInstructores.addAll(result);
-                adapter.notifyDataSetChanged();
+                Toast.makeText(this, "Ingresa un NSS", Toast.LENGTH_SHORT).show();
+                return;
             }
+
+            new Thread(() -> {
+                Instructor resultado = db.instructorDAO().buscarPorNSS(filtro);
+
+                runOnUiThread(() -> {
+                    if (resultado == null) {
+                        instructorEncontrado = null;
+                        Toast.makeText(this, "No se encontró ningún instructor", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    // 🔵 Guardamos el instructor encontrado
+                    instructorEncontrado = resultado;
+
+                    // 🔵 Mostramos solo este instructor en la lista
+                    listaInstructores.clear();
+                    listaInstructores.add(resultado);
+                    adapter.notifyDataSetChanged();
+
+                    btnModificar.setEnabled(true);
+                    btnEliminar.setEnabled(true);
+
+                });
+            }).start();
         });
+
 
         btnAgregar.setOnClickListener(v -> {
-            // Ejemplo rápido: agregar instructor de prueba
-            Instructor nuevo = new Instructor("12345", "Nuevo", "Instructor", "", false, null);
-            db.instructorDAO().agregarInstructor(nuevo);
-            Toast.makeText(this, "Instructor agregado", Toast.LENGTH_SHORT).show();
-            cargarTodos();
+            Intent intent = new Intent(InstructorActivity.this, AgregarInstructorActivity.class);
+            startActivity(intent);
         });
 
+
+        // ✏ MODIFICAR — usa instructorEncontrado o instructorSeleccionado
         btnModificar.setOnClickListener(v -> {
-            if (instructorSeleccionado == null) return;
+            Instructor ins = instructorEncontrado != null ? instructorEncontrado : instructorSeleccionado;
 
-            // Ejemplo básico de edición
-            instructorSeleccionado.setNombre("Editado");
-            db.instructorDAO().actualizarInstructor(instructorSeleccionado);
+            if (ins == null) {
+                Toast.makeText(this, "No hay instructor seleccionado", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-            Toast.makeText(this, "Instructor actualizado", Toast.LENGTH_SHORT).show();
-            cargarTodos();
+            Intent intent = new Intent(InstructorActivity.this, EditarInstructorActivity.class);
+            intent.putExtra("NSS_INSTRUCTOR", ins.getNSS());
+            startActivity(intent);
         });
+
 
         btnEliminar.setOnClickListener(v -> {
-            if (instructorSeleccionado == null) return;
+            Instructor ins = instructorEncontrado != null ? instructorEncontrado : instructorSeleccionado;
 
-            db.instructorDAO().eliminarInstructor(instructorSeleccionado);
-            Toast.makeText(this, "Instructor eliminado", Toast.LENGTH_SHORT).show();
-            instructorSeleccionado = null;
+            if (ins == null) return;
 
-            btnModificar.setEnabled(false);
-            btnEliminar.setEnabled(false);
+            new Thread(() -> {
+                db.instructorDAO().eliminarInstructor(ins);
 
-            cargarTodos();
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Instructor eliminado", Toast.LENGTH_SHORT).show();
+                    instructorSeleccionado = null;
+                    instructorEncontrado = null;
+
+                    btnModificar.setEnabled(false);
+                    btnEliminar.setEnabled(false);
+
+                    cargarTodos();
+                });
+            }).start();
         });
+
     }
 }
+
 
 class CustomAdapterInstructor extends RecyclerView.Adapter<CustomAdapterInstructor.ViewHolder> {
 
     private ArrayList<Instructor> lista;
-
-    // Click Listener opcional para seleccionar un instructor
     private OnItemClickListener listener;
 
     public interface OnItemClickListener {
@@ -140,6 +184,11 @@ class CustomAdapterInstructor extends RecyclerView.Adapter<CustomAdapterInstruct
 
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
+        notifyDataSetChanged();
+    }
+
+    public CustomAdapterInstructor(ArrayList<Instructor> lista) {
+        this.lista = lista;
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
@@ -157,36 +206,30 @@ class CustomAdapterInstructor extends RecyclerView.Adapter<CustomAdapterInstruct
         }
     }
 
-    public CustomAdapterInstructor(ArrayList<Instructor> lista) {
-        this.lista = lista;
-    }
-
     @NonNull
     @Override
-    public CustomAdapterInstructor.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.textview_instructor, parent, false);
+
         return new ViewHolder(view, listener, lista);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Instructor ins = lista.get(position);
-        holder.tvInfo.setText(ins.getNSS()
-                + " - " + ins.getNombre()
-                + " " + ins.getApellidoPat()
-                + " " + ins.getApellidoMat()
-                + " " + ins.getMatriculaVehiculo());
+
+        holder.tvInfo.setText(
+                ins.getNSS() + " - " +
+                        ins.getNombre() + " " +
+                        ins.getApellidoPat() + " " +
+                        ins.getApellidoMat() + " " +
+                        ins.getMatriculaVehiculo()
+        );
     }
 
     @Override
     public int getItemCount() {
         return lista.size();
-    }
-
-    // Método para refrescar la lista
-    public void actualizarLista(ArrayList<Instructor> nuevaLista) {
-        lista = nuevaLista;
-        notifyDataSetChanged();
     }
 }

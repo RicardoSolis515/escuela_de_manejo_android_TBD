@@ -16,6 +16,8 @@
         <activity android:name=".AutoActivity" />
         <activity android:name=".AgregarAutoActivity" />
         <activity android:name=".EditarAutoActivity" />
+        <activity android:name=".AgregarInstructorActivity" />
+        <activity android:name=".EditarInstructorActivity" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
