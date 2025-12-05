@@ -33,11 +33,11 @@ public class EditarAutoActivity extends Activity {
         btnActualizar = findViewById(R.id.btn_actualizar_auto);
         btnCancelar = findViewById(R.id.btn_cancelar_editar);
 
-        // Recibir matrícula del auto a editar
+        // Obtener la matrícula enviada
         matriculaOriginal = getIntent().getStringExtra("matricula");
 
         if (matriculaOriginal == null) {
-            Toast.makeText(this, "Error al recibir el auto", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Error al recibir auto", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -63,31 +63,32 @@ public class EditarAutoActivity extends Activity {
     }
 
     private void actualizarAuto() {
-        String matricula = edtMatricula.getText().toString();
-        String marca = edtMarca.getText().toString();
-        String modelo = edtModelo.getText().toString();
+        String marca = edtMarca.getText().toString().trim();
+        String modelo = edtModelo.getText().toString().trim();
+        String kmStr = edtKilometraje.getText().toString().trim();
+
+        if (marca.isEmpty() || modelo.isEmpty() || kmStr.isEmpty()) {
+            Toast.makeText(this, "Completa todos los campos", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         int km;
         try {
-            km = Integer.parseInt(edtKilometraje.getText().toString());
+            km = Integer.parseInt(kmStr);
         } catch (NumberFormatException e) {
             Toast.makeText(this, "Kilometraje inválido", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (matricula.isEmpty() || marca.isEmpty() || modelo.isEmpty()) {
-            Toast.makeText(this, "Completa todos los campos", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        db.autoDAO().actualizarAutoPorMatricula(
+                marca,
+                modelo,
+                ""+km,
+                db.autoDAO().mostrarUnico(matriculaOriginal).isAsignado(),
+                matriculaOriginal
+        );
 
-        Auto auto = new Auto(matricula, false, marca, modelo, ""+km);
-        db.autoDAO().actualizarAutoPorMatricula(marca, modelo, ""+km, false, matricula);
-/*
-        if (resultado) {
-            Toast.makeText(this, "Auto actualizado correctamente", Toast.LENGTH_SHORT).show();
-            finish();
-        } else {
-            Toast.makeText(this, "Error al actualizar", Toast.LENGTH_SHORT).show();
-        }*/
+        Toast.makeText(this, "Auto actualizado correctamente", Toast.LENGTH_SHORT).show();
+        finish();
     }
 }
