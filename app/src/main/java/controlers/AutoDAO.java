@@ -13,25 +13,21 @@ import enteties.Auto;
 @Dao
 public interface AutoDAO {
 
-    // ALTAS
     @Insert
     void agregarAuto(Auto auto);
 
-    // BAJAS
     @Delete
     void eliminarAuto(Auto auto);
 
     @Query("DELETE FROM auto WHERE matricula = :matricula")
     void eliminarAutoPorMatricula(String matricula);
 
-    // CAMBIOS
     @Update
     void actualizarAuto(Auto auto);
 
     @Query("UPDATE auto SET marca = :marca, modelo = :modelo, kilometraje = :km, asignado = :asignado WHERE matricula = :matricula")
     void actualizarAutoPorMatricula(String marca, String modelo, String km, boolean asignado, String matricula);
 
-    // CONSULTAS
     @Query("SELECT * FROM auto")
     List<Auto> mostrarTodos();
 
@@ -46,4 +42,7 @@ public interface AutoDAO {
 
     @Query("SELECT * FROM auto WHERE matricula LIKE '%' || :filtro || '%'")
     List<Auto> buscarPorCoincidencia(String filtro);
+
+    @Query("SELECT * FROM auto WHERE matricula = :matricula")
+    Auto mostrarUnico(String matricula);
 }

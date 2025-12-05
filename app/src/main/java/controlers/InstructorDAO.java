@@ -28,17 +28,17 @@ public interface InstructorDAO {
     @Update
     void actualizarInstructor(Instructor instructor);
 
-    @Query("UPDATE instructor SET nombre = :nombre, apellidoPaterno = :apPat, apellidoMaterno = :apMat, senior = :senior, matriculaVehiculo = :matriculaVehiculo WHERE NSS = :nss")
+    @Query("UPDATE instructor SET nombre = :nombre, apellidoPat = :apPat, apellidoMat = :apMat, senior = :senior, matriculaVehiculo = :matriculaVehiculo WHERE NSS = :nss")
     void actualizarInstructorPorNSS(String nss, String nombre, String apPat, String apMat, boolean senior, String matriculaVehiculo);
 
     // CONSULTAS
     @Query("SELECT * FROM instructor")
     List<Instructor> mostrarTodos();
 
-    @Query("SELECT * FROM instructor WHERE nombre = :nombre")
+    @Query("SELECT * FROM instructor WHERE nombre LIKE '%' || :nombre || '%'")
     List<Instructor> mostrarPorNombre(String nombre);
 
-    @Query("SELECT * FROM instructor WHERE NSS LIKE :pattern")
+    @Query("SELECT * FROM instructor WHERE NSS LIKE '%' || :pattern || '%'")
     List<Instructor> buscarPorNSSSimilar(String pattern);
 
     @Query("SELECT * FROM instructor WHERE NSS LIKE :nss || '%'")
@@ -46,4 +46,7 @@ public interface InstructorDAO {
 
     @Query("SELECT * FROM instructor WHERE NSS LIKE '%' || :filtro || '%'")
     List<Instructor> buscarPorCoincidencia(String filtro);
+
+    @Query("SELECT * FROM instructor WHERE NSS = :nss LIMIT 1")
+    Instructor buscarPorNSS(String nss);
 }

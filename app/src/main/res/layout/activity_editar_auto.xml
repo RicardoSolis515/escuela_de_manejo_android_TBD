@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="#FFFFFF">
+
+    <TextView
+        android:id="@+id/txtTituloEditar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Editar Auto"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_gravity="center"
+        android:paddingBottom="20dp" />
+
+    <EditText
+        android:id="@+id/edt_matricula_editar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Matrícula"
+        android:inputType="text"
+        android:enabled="false" />
+
+    <EditText
+        android:id="@+id/edt_marca_editar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Marca"
+        android:inputType="text" />
+
+    <EditText
+        android:id="@+id/edt_modelo_editar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Modelo"
+        android:inputType="text" />
+
+    <EditText
+        android:id="@+id/edt_kilometraje_editar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Kilometraje"
+        android:inputType="number"
+        android:maxLength="7" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingTop="20dp">
+
+        <Button
+            android:id="@+id/btn_actualizar_auto"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Actualizar" />
+
+        <Button
+            android:id="@+id/btn_cancelar_editar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Cancelar" />
+    </LinearLayout>
+
+</LinearLayout>
