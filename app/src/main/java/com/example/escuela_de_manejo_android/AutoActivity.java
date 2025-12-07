@@ -33,7 +33,7 @@ public class AutoActivity extends AppCompatActivity {
 
     private Escuale_db baseDatos;
 
-    Auto autoSeleccionado = null;
+    private Auto autoActual = null;  // 🔵 Auto seleccionado o encontrado
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -42,6 +42,14 @@ public class AutoActivity extends AppCompatActivity {
 
         baseDatos = Escuale_db.getAppDatabase(this);
 
+        inicializarUI();
+        configurarRecycler();
+        configurarFiltroEnVivo();
+        cargarAutos();
+        configurarClicks();
+    }
+
+    private void inicializarUI() {
         recyclerViewAutos = findViewById(R.id.lista_auto);
         filtroAuto = findViewById(R.id.filtro_auto);
         btnAgregar = findViewById(R.id.btn_agregar_auto);
@@ -49,62 +57,97 @@ public class AutoActivity extends AppCompatActivity {
         btnEliminar = findViewById(R.id.btn_eliminar_auto);
         btnBuscar = findViewById(R.id.btn_buscar_auto);
 
+        btnEditar.setEnabled(false);
+        btnEliminar.setEnabled(false);
+    }
+
+    private void configurarRecycler() {
         recyclerViewAutos.setLayoutManager(new LinearLayoutManager(this));
+    }
 
-        cargarAutos();
-
-        btnAgregar.setOnClickListener(v -> {
-            Intent intent = new Intent(this, AgregarAutoActivity.class);
-            startActivity(intent);
-        });
-
-        btnEditar.setOnClickListener(v -> {
-            if (autoSeleccionado == null) {
-                Toast.makeText(this, "Seleccione un auto", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            Intent intent = new Intent(this, EditarAutoActivity.class);
-            intent.putExtra("matricula", autoSeleccionado.getMatricula());
-            startActivity(intent);
-        });
-
-        btnEliminar.setOnClickListener(v -> eliminarAuto());
-
-        btnBuscar.setOnClickListener(v ->
-                filtrarAutos(filtroAuto.getText().toString())
-        );
-
-        filtroAuto.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void afterTextChanged(Editable s) {}
+    // 🔵 FILTRO EN VIVO
+    private void configurarFiltroEnVivo() {
+        filtroAuto.addTextChangedListener(new SimpleTextWatcher() {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                autoActual = null;
+                btnEditar.setEnabled(false);
+                btnEliminar.setEnabled(false);
+
                 filtrarAutos(s.toString());
             }
         });
     }
 
+    private void configurarClicks() {
+
+        btnAgregar.setOnClickListener(v -> {
+            startActivity(new Intent(this, AgregarAutoActivity.class));
+        });
+
+        btnEditar.setOnClickListener(v -> {
+            if (autoActual == null) {
+                Toast.makeText(this, "Seleccione un auto", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Intent intent = new Intent(this, EditarAutoActivity.class);
+            intent.putExtra("matricula", autoActual.getMatricula());
+            startActivity(intent);
+        });
+
+        btnEliminar.setOnClickListener(v -> eliminarAuto());
+
+        btnBuscar.setOnClickListener(v -> {
+            String texto = filtroAuto.getText().toString().trim();
+
+            if (texto.isEmpty()) {
+                Toast.makeText(this, "Ingresa una matrícula", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Auto resultado = baseDatos.autoDAO().mostrarUnico(texto);
+
+            if (resultado == null) {
+                Toast.makeText(this, "No se encontró el auto", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            autoActual = resultado;
+
+            ArrayList<Auto> unicaLista = new ArrayList<>();
+            unicaLista.add(resultado);
+
+            adapter.actualizarLista(unicaLista);
+
+            btnEditar.setEnabled(true);
+            btnEliminar.setEnabled(true);
+        });
+    }
+
     private void eliminarAuto() {
-        if (autoSeleccionado != null) {
-            baseDatos.autoDAO().eliminarAuto(autoSeleccionado);
-            Toast.makeText(this, "Auto eliminado", Toast.LENGTH_SHORT).show();
-            autoSeleccionado = null;
-            btnEditar.setEnabled(false);
-            btnEliminar.setEnabled(false);
-            cargarAutos();
-        }
+        if (autoActual == null) return;
+
+        baseDatos.autoDAO().eliminarAuto(autoActual);
+        Toast.makeText(this, "Auto eliminado", Toast.LENGTH_SHORT).show();
+
+        autoActual = null;
+        btnEditar.setEnabled(false);
+        btnEliminar.setEnabled(false);
+
+        cargarAutos();
     }
 
     private void cargarAutos() {
-        autoSeleccionado = null;
+        autoActual = null;
         btnEditar.setEnabled(false);
         btnEliminar.setEnabled(false);
 
         List<Auto> listaBD = baseDatos.autoDAO().mostrarTodos();
-        adapter = new AutoAdapter(new ArrayList<>(listaBD));
 
+        adapter = new AutoAdapter(new ArrayList<>(listaBD));
         adapter.setOnItemClickListener(auto -> {
-            autoSeleccionado = auto;
+            autoActual = auto;
             btnEditar.setEnabled(true);
             btnEliminar.setEnabled(true);
         });
@@ -127,6 +170,8 @@ public class AutoActivity extends AppCompatActivity {
         cargarAutos();
     }
 }
+
+
 
 
 

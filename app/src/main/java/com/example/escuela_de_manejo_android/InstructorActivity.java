@@ -2,6 +2,8 @@ package com.example.escuela_de_manejo_android;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,6 +22,7 @@ import java.util.List;
 
 import db.Escuale_db;
 import enteties.Instructor;
+
 public class InstructorActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
@@ -31,12 +34,8 @@ public class InstructorActivity extends AppCompatActivity {
 
     private Escuale_db db;
 
-    // 🔵 ESTE ES EL INSTRUCTOR ENCONTRADO POR BUSQUEDA
-    private Instructor instructorEncontrado = null;
-
-    // 🔵 ESTE ES EL INSTRUCTOR SELECCIONADO EN LA LISTA
-    private Instructor instructorSeleccionado = null;
-
+    // 🔵 Instructor seleccionado o encontrado
+    private Instructor instructorActual = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +46,7 @@ public class InstructorActivity extends AppCompatActivity {
 
         inicializarUI();
         configurarRecycler();
+        configurarFiltroEnVivo();
         cargarTodos();
         configurarClicks();
     }
@@ -68,8 +68,7 @@ public class InstructorActivity extends AppCompatActivity {
         adapter = new CustomAdapterInstructor(listaInstructores);
 
         adapter.setOnItemClickListener(instructor -> {
-            instructorSeleccionado = instructor;
-            instructorEncontrado = instructor; // 🔵 también lo guardamos como encontrado
+            instructorActual = instructor;
             btnModificar.setEnabled(true);
             btnEliminar.setEnabled(true);
         });
@@ -77,9 +76,30 @@ public class InstructorActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
     }
 
-    private void cargarTodos() {
+    // 🔵 FILTRO EN VIVO
+    private void configurarFiltroEnVivo() {
+        edtBuscar.addTextChangedListener(new SimpleTextWatcher() {
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                instructorActual = null;
+                btnModificar.setEnabled(false);
+                btnEliminar.setEnabled(false);
+
+                filtrarLista(s.toString());
+            }
+        });
+    }
+
+    private void filtrarLista(String filtro) {
         new Thread(() -> {
-            List<Instructor> data = db.instructorDAO().mostrarTodos();
+            List<Instructor> data;
+
+            if (filtro.isEmpty()) {
+                data = db.instructorDAO().mostrarTodos();
+            } else {
+                data = db.instructorDAO().buscarPorCoincidencia("%" + filtro + "%");
+            }
 
             runOnUiThread(() -> {
                 listaInstructores.clear();
@@ -89,10 +109,12 @@ public class InstructorActivity extends AppCompatActivity {
         }).start();
     }
 
+    private void cargarTodos() {
+        filtrarLista("");
+    }
 
     private void configurarClicks() {
 
-        // 🔍 BUSCAR POR NSS EXACTO
         btnBuscar.setOnClickListener(v -> {
             String filtro = edtBuscar.getText().toString().trim();
 
@@ -106,64 +128,45 @@ public class InstructorActivity extends AppCompatActivity {
 
                 runOnUiThread(() -> {
                     if (resultado == null) {
-                        instructorEncontrado = null;
-                        Toast.makeText(this, "No se encontró ningún instructor", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "No se encontró", Toast.LENGTH_SHORT).show();
                         return;
                     }
 
-                    // 🔵 Guardamos el instructor encontrado
-                    instructorEncontrado = resultado;
+                    instructorActual = resultado;
 
-                    // 🔵 Mostramos solo este instructor en la lista
                     listaInstructores.clear();
                     listaInstructores.add(resultado);
                     adapter.notifyDataSetChanged();
 
                     btnModificar.setEnabled(true);
                     btnEliminar.setEnabled(true);
-
                 });
             }).start();
         });
 
-
         btnAgregar.setOnClickListener(v -> {
-            Intent intent = new Intent(InstructorActivity.this, AgregarInstructorActivity.class);
-            startActivity(intent);
+            startActivity(new Intent(this, AgregarInstructorActivity.class));
         });
 
-
-        // ✏ MODIFICAR — usa instructorEncontrado o instructorSeleccionado
         btnModificar.setOnClickListener(v -> {
-            Instructor ins = instructorEncontrado != null ? instructorEncontrado : instructorSeleccionado;
+            if (instructorActual == null) return;
 
-            if (ins == null) {
-                Toast.makeText(this, "No hay instructor seleccionado", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            Intent intent = new Intent(InstructorActivity.this, EditarInstructorActivity.class);
-            intent.putExtra("NSS_INSTRUCTOR", ins.getNSS());
+            Intent intent = new Intent(this, EditarInstructorActivity.class);
+            intent.putExtra("NSS_INSTRUCTOR", instructorActual.getNSS());
             startActivity(intent);
         });
-
 
         btnEliminar.setOnClickListener(v -> {
-            Instructor ins = instructorEncontrado != null ? instructorEncontrado : instructorSeleccionado;
-
-            if (ins == null) return;
+            if (instructorActual == null) return;
 
             new Thread(() -> {
-                db.instructorDAO().eliminarInstructor(ins);
+                db.instructorDAO().eliminarInstructor(instructorActual);
 
                 runOnUiThread(() -> {
                     Toast.makeText(this, "Instructor eliminado", Toast.LENGTH_SHORT).show();
-                    instructorSeleccionado = null;
-                    instructorEncontrado = null;
-
+                    instructorActual = null;
                     btnModificar.setEnabled(false);
                     btnEliminar.setEnabled(false);
-
                     cargarTodos();
                 });
             }).start();
@@ -172,6 +175,10 @@ public class InstructorActivity extends AppCompatActivity {
     }
 }
 
+abstract class SimpleTextWatcher implements TextWatcher {
+    @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+    @Override public void afterTextChanged(Editable s) {}
+}
 
 class CustomAdapterInstructor extends RecyclerView.Adapter<CustomAdapterInstructor.ViewHolder> {
 
